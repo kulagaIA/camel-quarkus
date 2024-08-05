@@ -85,7 +85,7 @@ class PythonProcessor {
                         source.getCompiledCode());
             }
             final RuntimeValue<PythonLanguage> language = recorder.languageNewInstance(builder);
-            return new CamelBeanBuildItem("groovy", PythonLanguage.class.getName(), language);
+            return new CamelBeanBuildItem("python", PythonLanguage.class.getName(), language);
         }
         return null;
     }
