@@ -18,11 +18,20 @@ package org.apache.camel.quarkus.component.python.deployment;
 
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.annotations.ExecutionTime;
+import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.pkg.steps.NativeOrNativeSourcesBuild;
+import io.quarkus.runtime.RuntimeValue;
+import org.apache.camel.ExpressionIllegalSyntaxException;
+import org.apache.camel.language.python.PythonLanguage;
+import org.apache.camel.quarkus.component.python.PythonExpressionRecorder;
+import org.apache.camel.quarkus.core.deployment.spi.CamelBeanBuildItem;
 import org.apache.camel.quarkus.support.language.deployment.ExpressionBuildItem;
 import org.apache.camel.quarkus.support.language.deployment.ExpressionExtractionResultBuildItem;
 import org.apache.camel.quarkus.support.language.deployment.ScriptBuildItem;
+import org.python.core.PyCode;
+import org.python.util.PythonInterpreter;
 
 import java.util.List;
 
@@ -36,10 +45,10 @@ class PythonProcessor {
     }
 
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
-    void collectExpressions(ExpressionExtractionResultBuildItem result,
+    void compileExpressions(ExpressionExtractionResultBuildItem result,
                             List<ExpressionBuildItem> expressions,
                             List<ScriptBuildItem> scripts,
-                            BuildProducer<PythonExpressionSourceBuildItem> producer) {
+                            BuildProducer<PythonExpressionBuildItem> producer) {
         if (result.isSuccess()) {
             List<ExpressionBuildItem> pythonExpressions = expressions.stream()
                     .filter(exp -> "python".equals(exp.getLanguage())).toList();
@@ -49,14 +58,45 @@ class PythonProcessor {
                 return;
             }
 
-            for (ExpressionBuildItem pythonExpression : pythonExpressions) {
-                pythonExpression.getExpression();
-
+            try (PythonInterpreter compiler = new PythonInterpreter()) {
+                for (ExpressionBuildItem pythonExpression : pythonExpressions) {
+                    producer.produce(createPythonExpressionBuildItem(compiler, pythonExpression.getExpression()));
+                }
+                for (ScriptBuildItem pythonScript : pythonScripts) {
+                    producer.produce(createPythonExpressionBuildItem(compiler, pythonScript.getLoadedContent()));
+                }
             }
-
         }
-
     }
 
+    @Record(ExecutionTime.STATIC_INIT)
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    CamelBeanBuildItem configureLanguage(
+            PythonExpressionRecorder recorder,
+            ExpressionExtractionResultBuildItem result,
+            List<PythonExpressionBuildItem> sources) {
 
+        if (result.isSuccess() && !sources.isEmpty()) {
+            RuntimeValue<PythonLanguage.Builder> builder = recorder.languageBuilder();
+            for (PythonExpressionBuildItem source : sources) {
+                recorder.addScript(
+                        builder,
+                        source.getSourceCode(),
+                        source.getCompiledCode());
+            }
+            final RuntimeValue<PythonLanguage> language = recorder.languageNewInstance(builder);
+            return new CamelBeanBuildItem("groovy", PythonLanguage.class.getName(), language);
+        }
+        return null;
+    }
+
+    private PythonExpressionBuildItem createPythonExpressionBuildItem(PythonInterpreter compiler, String expression) {
+        PyCode compiledExpression;
+        try {
+            compiledExpression = compiler.compile(expression);
+        } catch (Exception e) {
+            throw new ExpressionIllegalSyntaxException(expression, e);
+        }
+        return new PythonExpressionBuildItem(expression, compiledExpression);
+    }
 }
