@@ -48,7 +48,7 @@ class PythonProcessor {
     void compileExpressions(ExpressionExtractionResultBuildItem result,
                             List<ExpressionBuildItem> expressions,
                             List<ScriptBuildItem> scripts,
-                            BuildProducer<PythonExpressionBuildItem> producer) {
+                            BuildProducer<PythonCompiledExpressionBuildItem> producer) {
         if (result.isSuccess()) {
             List<ExpressionBuildItem> pythonExpressions = expressions.stream()
                     .filter(exp -> "python".equals(exp.getLanguage())).toList();
@@ -74,11 +74,11 @@ class PythonProcessor {
     CamelBeanBuildItem configureLanguage(
             PythonExpressionRecorder recorder,
             ExpressionExtractionResultBuildItem result,
-            List<PythonExpressionBuildItem> sources) {
+            List<PythonCompiledExpressionBuildItem> sources) {
 
         if (result.isSuccess() && !sources.isEmpty()) {
             RuntimeValue<PythonLanguage.Builder> builder = recorder.languageBuilder();
-            for (PythonExpressionBuildItem source : sources) {
+            for (PythonCompiledExpressionBuildItem source : sources) {
                 recorder.addScript(
                         builder,
                         source.getSourceCode(),
@@ -90,13 +90,13 @@ class PythonProcessor {
         return null;
     }
 
-    private PythonExpressionBuildItem createPythonExpressionBuildItem(PythonInterpreter compiler, String expression) {
+    private PythonCompiledExpressionBuildItem createPythonExpressionBuildItem(PythonInterpreter compiler, String expression) {
         PyCode compiledExpression;
         try {
             compiledExpression = compiler.compile(expression);
         } catch (Exception e) {
             throw new ExpressionIllegalSyntaxException(expression, e);
         }
-        return new PythonExpressionBuildItem(expression, compiledExpression);
+        return new PythonCompiledExpressionBuildItem(expression, compiledExpression);
     }
 }
