@@ -45,7 +45,6 @@
         <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-python</artifactId>
-            <version>4.8.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 

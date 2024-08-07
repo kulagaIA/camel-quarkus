@@ -20,27 +20,62 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 
-import org.junit.jupiter.api.Assertions;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
 class PythonTest {
 
+
     @Test
-    public void test() {
-        final String msg = java.util.UUID.randomUUID().toString().replace("-", "");
-        RestAssured.given() //
-                .contentType(ContentType.TEXT)
-                .body(msg)
-                .post("/python/post") //
+    void pythonHello() {
+        RestAssured.given()
+                .body("Will Smith")
+                .post("/python/hello")
                 .then()
-                .statusCode(201);
-
-        Assertions.fail("Add some assertions to " + getClass().getName());
-
-        RestAssured.get("/python/get")
-                .then()
-                .statusCode(200);
+                .statusCode(200)
+                .body(CoreMatchers.is("Hello Will Smith from Python!"));
     }
 
+    @Test
+    void pythonMultiplyByTwo() {
+        RestAssured.given()
+                .body(32767)
+                .post("/python/multiplyByTwo")
+                .then()
+                .statusCode(200)
+                .body(CoreMatchers.is("The result is 65534"));
+    }
+
+    @Test
+    void pythonHigh() {
+        RestAssured.given()
+                .body("45")
+                .post("/python/predicate")
+                .then()
+                .statusCode(200)
+                .body(CoreMatchers.is("High"));
+    }
+
+    @Test
+    void pythonLow() {
+        RestAssured.given()
+                .body("13")
+                .post("/python/predicate")
+                .then()
+                .statusCode(200)
+                .body(CoreMatchers.is("Low"));
+    }
+
+    @Test
+    void script() {
+        RestAssured.given()
+                .contentType(ContentType.TEXT)
+                .body(32767)
+                .post("/python/route/scriptPython")
+                .then()
+                .statusCode(200)
+                .body(Matchers.is("Hello 32767 from Python!"));
+    }
 }
