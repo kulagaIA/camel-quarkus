@@ -35,6 +35,7 @@
     <properties>
         <camel.quarkus.jvmSince>3.13.0</camel.quarkus.jvmSince>
         <camel.quarkus.nativeSince>3.13.0</camel.quarkus.nativeSince>
+        <quarkus.metadata.keywords>python</quarkus.metadata.keywords>
     </properties>
 
     <dependencies>
